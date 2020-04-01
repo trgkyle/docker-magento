@@ -38,8 +38,6 @@ services:
       - db
     volumes_from:
       - appdata
-    env_file:
-      - ./global.env
     labels:
       - traefik.http.routers.web.rule=Host(`magento232.localhost`)
       - traefik.http.services.web.loadbalancer.server.port=80
@@ -57,8 +55,6 @@ services:
       - db
     volumes_from:
       - appdata
-    env_file:
-      - ./global.env
     networks:
       - internal
 
@@ -95,16 +91,12 @@ services:
     image: meanbee/magento2-php:7.2-cli
     hostname: magento2-cron.docker
     command: run-cron
-    env_file:
-      - ./global.env    
     environment:
       - ENABLE_SENDMAIL=true
     volumes_from:
       - appdata
     links:
       - db
-    env_file:
-      - ./global.env 
     networks:
       - internal     
 
