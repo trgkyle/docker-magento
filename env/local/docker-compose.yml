@@ -1,0 +1,131 @@
+version: "2"
+services:
+  traefik:
+    image: traefik
+    restart: always
+    labels:
+      - traefik.http.routers.traefik.rule=Host(`traefik.nestpos.localhost`)
+      - traefik.http.services.traefik.loadbalancer.server.port=8080
+      - traefik.docker.network=proxy1
+    command:
+      --api.insecure=true --providers.docker
+    ports:
+      - 80:80
+      - 8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - proxy
+  varnish:
+    image: meanbee/magento2-varnish:latest
+    environment:
+      - VIRTUAL_HOST=magento2.docker
+      - VIRTUAL_PORT=80
+      - HTTPS_METHOD=noredirect
+    ports:
+      - 80
+    links:
+      - web
+    networks:
+      - internal
+
+  web:
+    image: meanbee/magento2-nginx:1.9
+    ports:
+      - 80
+    links:
+      - fpm
+      - db
+    volumes_from:
+      - appdata
+    env_file:
+      - ./global.env
+    labels:
+      - traefik.http.routers.web.rule=Host(`magento232.localhost`)
+      - traefik.http.services.web.loadbalancer.server.port=80
+      - traefik.docker.network=proxy
+    networks:
+      - proxy
+      - internal
+  
+  fpm:
+    hostname: fpm.magento2.docker
+    image: meanbee/magento2-php:7.2-fpm
+    ports:
+      - 9000
+    links:
+      - db
+    volumes_from:
+      - appdata
+    env_file:
+      - ./global.env
+    networks:
+      - internal
+
+  db:
+    image: mariadb:10.2
+    ports:
+      - 3306
+    volumes_from:
+      - dbdata
+    environment:
+      - MYSQL_ROOT_PASSWORD=magento
+      - MYSQL_DATABASE=magento
+      - MYSQL_USER=magento
+      - MYSQL_PASSWORD=magento
+      - TERM=meh
+    networks:
+      - internal
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - 80
+    links:
+      - db
+    labels:
+      - traefik.http.routers.phpmyadmin.rule=Host(`db.magento232.localhost`)
+      - traefik.http.services.phpmyadmin.loadbalancer.server.port=80
+      - traefik.docker.network=proxy
+    networks:
+      - proxy
+      - internal
+
+  cron:
+    image: meanbee/magento2-php:7.2-cli
+    hostname: magento2-cron.docker
+    command: run-cron
+    env_file:
+      - ./global.env    
+    environment:
+      - ENABLE_SENDMAIL=true
+    volumes_from:
+      - appdata
+    links:
+      - db
+    env_file:
+      - ./global.env 
+    networks:
+      - internal     
+
+  appdata:
+    image: tianon/true
+    volumes:
+      - ../../src:/var/www/magento
+    networks:
+      - internal
+
+  dbdata:
+    image: tianon/true
+    volumes:
+      - ../../data/mysql:/var/lib/mysql
+    networks:
+      - internal
+
+networks:
+  proxy:
+    external:
+      name: proxy
+  internal:
+    driver: bridge
+      
