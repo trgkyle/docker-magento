@@ -4,7 +4,7 @@ services:
     image: traefik
     restart: always
     labels:
-      - traefik.http.routers.traefik.rule=Host(`traefik.nestpos.localhost`)
+      - traefik.http.routers.traefik.rule=Host(`traefik.magento.localhost`)
       - traefik.http.services.traefik.loadbalancer.server.port=8080
       - traefik.docker.network=proxy1
     command:
@@ -39,7 +39,7 @@ services:
     volumes_from:
       - appdata
     labels:
-      - traefik.http.routers.web.rule=Host(`magento232.localhost`)
+      - traefik.http.routers.web.rule=Host(`magento.localhost`)
       - traefik.http.services.web.loadbalancer.server.port=80
       - traefik.docker.network=proxy
     networks:
@@ -80,7 +80,7 @@ services:
     links:
       - db
     labels:
-      - traefik.http.routers.phpmyadmin.rule=Host(`db.magento232.localhost`)
+      - traefik.http.routers.phpmyadmin.rule=Host(`db.magento.localhost`)
       - traefik.http.services.phpmyadmin.loadbalancer.server.port=80
       - traefik.docker.network=proxy
     networks:
@@ -98,7 +98,7 @@ services:
     links:
       - db
     networks:
-      - internal     
+      - internal
 
   appdata:
     image: tianon/true
