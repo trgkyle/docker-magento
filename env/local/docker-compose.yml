@@ -1,21 +1,5 @@
 version: "2"
 services:
-  traefik:
-    image: traefik
-    restart: always
-    labels:
-      - traefik.http.routers.traefik.rule=Host(`traefik.magento.localhost`)
-      - traefik.http.services.traefik.loadbalancer.server.port=8080
-      - traefik.docker.network=proxy1
-    command:
-      --api.insecure=true --providers.docker
-    ports:
-      - 80:80
-      - 8080
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - proxy
   varnish:
     image: meanbee/magento2-varnish:latest
     environment:
@@ -38,13 +22,19 @@ services:
       - db
     volumes_from:
       - appdata
+    env_file:
+      - ./global.env
     labels:
-      - traefik.http.routers.web.rule=Host(`magento.localhost`)
+      - traefik.http.routers.web.rule=Host(`magento231.localhost`)
       - traefik.http.services.web.loadbalancer.server.port=80
       - traefik.docker.network=proxy
     networks:
       - proxy
       - internal
+    #environment:
+      #- VIRTUAL_HOST=magento2.docker
+      #- VIRTUAL_PORT=80
+      #- HTTPS_METHOD=noredirect
   
   fpm:
     hostname: fpm.magento2.docker
@@ -55,6 +45,8 @@ services:
       - db
     volumes_from:
       - appdata
+    env_file:
+      - ./global.env
     networks:
       - internal
 
@@ -80,25 +72,63 @@ services:
     links:
       - db
     labels:
-      - traefik.http.routers.phpmyadmin.rule=Host(`db.magento.localhost`)
+      - traefik.http.routers.phpmyadmin.rule=Host(`db.magento231.localhost`)
       - traefik.http.services.phpmyadmin.loadbalancer.server.port=80
       - traefik.docker.network=proxy
     networks:
       - proxy
       - internal
 
+  cli:
+    hostname: cli.magento2.docker
+    image: meanbee/magento2-php:7.2-cli
+    links:
+      - db
+    volumes:
+      - ~/.composer/cache:/root/.composer/cache
+    command: ["chmod", "+x", "/usr/local/bin/magento-installer"]
+    volumes_from:
+      - appdata
+    env_file:
+      - ./global.env
+      - ./composer.env
+    environment:
+      - M2SETUP_INSTALL_DB=true
+      - M2SETUP_DB_HOST=db
+      - M2SETUP_DB_NAME=magento
+      - M2SETUP_DB_USER=magento
+      - M2SETUP_DB_PASSWORD=magento
+      - M2SETUP_BASE_URL=http://magento231.localhost/
+      # - M2SETUP_SECURE_BASE_URL=https://magento2.docker/
+      - M2SETUP_BACKEND_FRONTNAME=admin
+      - M2SETUP_ADMIN_FIRSTNAME=Admin
+      - M2SETUP_ADMIN_LASTNAME=User
+      - M2SETUP_ADMIN_EMAIL=thuan.luuquang@gmail.com
+      - M2SETUP_ADMIN_USER=admin
+      - M2SETUP_ADMIN_PASSWORD=admin@123
+      - M2SETUP_VERSION=2.3.*
+      - M2SETUP_USE_SAMPLE_DATA=false
+      - M2SETUP_SOURCE_INCLUDE_SAMPLE_DATA=false
+      - M2SETUP_COMPOSER_INSTALL=false
+    networks:
+      - internal
+
   cron:
     image: meanbee/magento2-php:7.2-cli
     hostname: magento2-cron.docker
     command: run-cron
+    env_file:
+      - ./global.env    
     environment:
       - ENABLE_SENDMAIL=true
     volumes_from:
       - appdata
     links:
       - db
+    env_file:
+      - ./global.env 
     networks:
-      - internal
+      - internal     
 
   appdata:
     image: tianon/true
@@ -120,4 +150,3 @@ networks:
       name: proxy
   internal:
     driver: bridge
-      
