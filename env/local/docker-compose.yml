@@ -133,7 +133,7 @@ services:
   appdata:
     image: tianon/true
     volumes:
-      - ../../src:/var/www/magento
+      - ../../src/magento:/var/www/magento
     networks:
       - internal
 
